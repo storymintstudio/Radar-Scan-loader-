@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Radar Scan Loader | Storymint Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="card" id="card" title="Click to replay">
+  <div class="radar">
+    <div class="sweep"></div>
+    <i class="blip" style="--a:35deg;  --r:.62"></i>
+    <i class="blip" style="--a:110deg; --r:.38"></i>
+    <i class="blip" style="--a:190deg; --r:.75"></i>
+    <i class="blip" style="--a:245deg; --r:.5"></i>
+    <i class="blip" style="--a:310deg; --r:.8"></i>
+  </div>
+
+  <svg viewBox="0 0 300 64" aria-hidden="true">
+    <path id="track" class="track" d="M8 52 C 70 52, 80 10, 150 30 S 240 54, 292 14"/>
+    <path id="fill" class="fill" d="M8 52 C 70 52, 80 10, 150 30 S 240 54, 292 14"/>
+    <g id="jet">
+      <path d="M-11 0 L8 0 L-1 -3 L-4 -10 L-6 -10 L-5 -3 L-9 -3 L-10 -6 L-12 -6 L-11 0 Z M-5 3 L-4 10 L-6 10 L-9 3 Z" fill="var(--signal)" transform="scale(1.1)"/>
+    </g>
+  </svg>
+
+  <div class="pct" id="pct">0%</div>
+  <div class="status" id="status">Scanning airspace…</div>
+  <div class="hint">tap to replay</div>
+</div>
+
+<script>
+  const card = document.getElementById('card');
+  const pctEl = document.getElementById('pct');
+  const statusEl = document.getElementById('status');
+  const fill = document.getElementById('fill');
+  const track = document.getElementById('track');
+  const jet = document.getElementById('jet');
+  const len = track.getTotalLength();
+  const DURATION = 6000;
+  const steps = [[0, 'Scanning airspace…'], [30, 'Locking targets…'], [65, 'Plotting flight path…'], [90, 'Final approach…']];
+  let raf;
+
+  fill.style.strokeDasharray = len;
+
+  function place(p) {
+    const d = len * p;
+    const a = track.getPointAtLength(d);
+    const b = track.getPointAtLength(Math.min(d + 1, len));
+    jet.setAttribute('transform', `translate(${a.x} ${a.y}) rotate(${Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI})`);
+    fill.style.strokeDashoffset = len - d;
+  }
+
+  const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+  function run() {
+    cancelAnimationFrame(raf);
+    card.classList.remove('done');
+    const start = performance.now();
+    (function frame(now) {
+      const t = Math.min((now - start) / DURATION, 1);
+      const p = ease(t);
+      const n = Math.round(p * 100);
+      pctEl.textContent = n + '%';
+      place(p);
+      statusEl.textContent = [...steps].reverse().find(s => n >= s[0])[1];
+      if (t < 1) { raf = requestAnimationFrame(frame); }
+      else { card.classList.add('done'); statusEl.textContent = 'Mission complete ✓'; }
+    })(start);
+  }
+
+  card.addEventListener('click', run);
+  run();
+</script>
+</body>
+</html>
